@@ -27,60 +27,63 @@ fn main() -> Result<()> {
 }
 
 fn handle_stream(mut stream: TcpStream) {
-    let mut reader = BufReader::new(&stream);
-    let mut stream_buf = String::new();
-    let mut write_buf = String::new();
-    match reader.read_line(&mut stream_buf) {
-        Ok(nbytes) => {
-            if nbytes == 0 {
-                return;
-            }
+    loop {
+        let mut reader = BufReader::new(&mut stream);
+        let mut stream_buf = String::new();
+        let mut write_buf = String::new();
+        match reader.read_line(&mut stream_buf) {
+            Ok(nbytes) => {
+                if nbytes == 0 {
+                    return;
+                }
 
-            // Check if first value is a *
-            if &stream_buf[0..1] != "*" {
-                return send_error(&mut stream, "First value is not *");
-            }
-            // Grab rest of lines based on first number
-            if let Ok(param_n) = &stream_buf[1..].trim().parse::<usize>() {
-                for _ in 0..param_n * 2 {
-                    match reader.read_line(&mut stream_buf) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            return send_error(
-                                &mut stream,
-                                &format!("Failed to read lines that should be there: {}", e),
-                            );
+                // Check if first value is a *
+                if &stream_buf[0..1] != "*" {
+                    return send_error(&mut stream, "First value is not *");
+                }
+                // Grab rest of lines based on first number
+                if let Ok(param_n) = &stream_buf[1..].trim().parse::<usize>() {
+                    for _ in 0..param_n * 2 {
+                        match reader.read_line(&mut stream_buf) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                return send_error(
+                                    &mut stream,
+                                    &format!("Failed to read lines that should be there: {}", e),
+                                );
+                            }
                         }
                     }
-                }
-            } else {
-                return send_error(
-                    &mut stream,
-                    "Could not parse the number of parameters sent via protocol",
-                );
-            }
-
-            match RedisProtocol::from_str(&stream_buf) {
-                Ok((_, redis_data)) => {
-                    if !redis_data.valid() {
-                        return send_error(
-                            &mut stream,
-                            "Data sent over doesn't match redis protocol - parameters length specified doesn't equal number of parameters sent",
-                        );
-                    }
-                    handle_actions(redis_data, &mut write_buf);
-                }
-                Err(e) => {
+                } else {
                     return send_error(
                         &mut stream,
-                        &format!("Failed to parse the incoming stream: {}", e),
+                        "Could not parse the number of parameters sent via protocol",
                     );
                 }
-            }
 
-            send_response(&mut stream, &mut write_buf);
+                match RedisProtocol::from_str(&stream_buf) {
+                    Ok((_, redis_data)) => {
+                        println!("{:?}", redis_data);
+                        if !redis_data.valid() {
+                            return send_error(
+                                &mut stream,
+                                "Data sent over doesn't match redis protocol - parameters length specified doesn't equal number of parameters sent",
+                            );
+                        }
+                        handle_actions(redis_data, &mut write_buf);
+                    }
+                    Err(e) => {
+                        return send_error(
+                            &mut stream,
+                            &format!("Failed to parse the incoming stream: {}", e),
+                        );
+                    }
+                }
+
+                send_response(&mut stream, &mut write_buf);
+            }
+            Err(e) => send_error(&mut stream, &format!("Failed to read from stream: {}", e)),
         }
-        Err(e) => send_error(&mut stream, &format!("Failed to read from stream: {}", e)),
     }
 }
 

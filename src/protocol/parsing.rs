@@ -4,11 +4,13 @@ use nom::{
     multi::many0,
 };
 
+#[derive(Debug)]
 pub struct RedisProtocol {
     pub params_n: usize,
     pub params_list: Vec<RedisParam>,
 }
 
+#[derive(Debug)]
 pub struct RedisParam {
     pub param_size: usize,
     pub param_value: String,
