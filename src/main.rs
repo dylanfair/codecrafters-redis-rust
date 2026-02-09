@@ -3,9 +3,10 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 
-use crate::protocol::handle_actions;
+use crate::protocol::handle_commands;
 use crate::protocol::parsing::RedisProtocol;
 
+mod commands;
 mod protocol;
 
 fn main() -> Result<()> {
@@ -65,7 +66,6 @@ fn handle_stream(mut stream: TcpStream) {
 
                 match RedisProtocol::from_str(&stream_buf) {
                     Ok((_, redis_data)) => {
-                        println!("{:?}", redis_data);
                         if !redis_data.valid() {
                             send_error(
                                 &mut stream,
@@ -73,7 +73,7 @@ fn handle_stream(mut stream: TcpStream) {
                             );
                             continue;
                         }
-                        handle_actions(redis_data, &mut write_buf);
+                        handle_commands(redis_data, &mut write_buf);
                     }
                     Err(e) => {
                         send_error(

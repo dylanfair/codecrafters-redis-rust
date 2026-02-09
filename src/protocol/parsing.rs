@@ -109,4 +109,16 @@ mod test {
         let (_, protocol) = RedisProtocol::from_str(str).unwrap();
         assert!(!protocol.valid());
     }
+
+    #[test]
+    fn parse_echo() {
+        let str = "*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n";
+        let (_, protocol) = RedisProtocol::from_str(str).unwrap();
+        assert_eq!(protocol.params_n, 2);
+        assert_eq!(protocol.params_list[0].param_size, 4);
+        assert_eq!(protocol.params_list[0].param_value, "ECHO".to_string());
+        assert_eq!(protocol.params_list[1].param_size, 3);
+        assert_eq!(protocol.params_list[1].param_value, "hey".to_string());
+        assert!(protocol.valid());
+    }
 }
