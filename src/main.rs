@@ -39,47 +39,50 @@ fn handle_stream(mut stream: TcpStream) {
 
                 // Check if first value is a *
                 if &stream_buf[0..1] != "*" {
-                    return send_error(&mut stream, "First value is not *");
+                    send_error(&mut stream, "First value is not *");
+                    continue;
                 }
+
                 // Grab rest of lines based on first number
                 if let Ok(param_n) = &stream_buf[1..].trim().parse::<usize>() {
                     for _ in 0..param_n * 2 {
                         match reader.read_line(&mut stream_buf) {
                             Ok(_) => {}
-                            Err(e) => {
-                                return send_error(
-                                    &mut stream,
-                                    &format!("Failed to read lines that should be there: {}", e),
-                                );
-                            }
+                            Err(e) => write_buf.push_str(&format!(
+                                "Failed to read lines that should be there: {}",
+                                e
+                            )),
                         }
                     }
                 } else {
-                    return send_error(
-                        &mut stream,
-                        "Could not parse the number of parameters sent via protocol",
-                    );
+                    write_buf.push_str("Could not parse the number of parameters sent via protocol")
+                }
+                // Anything written in is an error at this point
+                if !write_buf.is_empty() {
+                    send_error(&mut stream, &write_buf);
+                    continue;
                 }
 
                 match RedisProtocol::from_str(&stream_buf) {
                     Ok((_, redis_data)) => {
                         println!("{:?}", redis_data);
                         if !redis_data.valid() {
-                            return send_error(
+                            send_error(
                                 &mut stream,
                                 "Data sent over doesn't match redis protocol - parameters length specified doesn't equal number of parameters sent",
                             );
+                            continue;
                         }
                         handle_actions(redis_data, &mut write_buf);
                     }
                     Err(e) => {
-                        return send_error(
+                        send_error(
                             &mut stream,
                             &format!("Failed to parse the incoming stream: {}", e),
                         );
+                        continue;
                     }
                 }
-
                 send_response(&mut stream, &mut write_buf);
             }
             Err(e) => send_error(&mut stream, &format!("Failed to read from stream: {}", e)),
