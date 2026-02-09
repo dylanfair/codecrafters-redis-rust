@@ -5,13 +5,13 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::database::cache::RedisCache;
 use crate::protocol::handle_commands;
 use crate::protocol::parsing::RedisProtocol;
 
 mod commands;
+mod database;
 mod protocol;
-
-pub type RedisCache = Arc<Mutex<HashMap<String, String>>>;
 
 fn main() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
