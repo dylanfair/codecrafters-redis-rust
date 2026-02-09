@@ -1,6 +1,8 @@
 use anyhow::Result;
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use crate::protocol::handle_commands;
@@ -9,14 +11,18 @@ use crate::protocol::parsing::RedisProtocol;
 mod commands;
 mod protocol;
 
+pub type RedisCache = Arc<Mutex<HashMap<String, String>>>;
+
 fn main() -> Result<()> {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    let cache = Arc::new(Mutex::new(HashMap::new()));
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                let cache_clone = Arc::clone(&cache);
                 thread::spawn(|| {
-                    handle_stream(stream);
+                    handle_stream(stream, cache_clone);
                 });
             }
             Err(e) => {
@@ -27,7 +33,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn handle_stream(mut stream: TcpStream) {
+fn handle_stream(mut stream: TcpStream, cache: RedisCache) {
     loop {
         let mut reader = BufReader::new(&mut stream);
         let mut stream_buf = String::new();
@@ -73,7 +79,7 @@ fn handle_stream(mut stream: TcpStream) {
                             );
                             continue;
                         }
-                        handle_commands(redis_data, &mut write_buf);
+                        handle_commands(redis_data, &mut write_buf, &cache);
                     }
                     Err(e) => {
                         send_error(
