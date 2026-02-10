@@ -1,3 +1,4 @@
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -11,11 +12,13 @@ pub enum ExpirationFidelity {
     Pxat(u64),
 }
 
+#[derive(Debug)]
 pub enum DataType {
     String(String),
     List(Vec<String>),
 }
 
+#[derive(Debug)]
 pub struct RedisValue {
     pub value: DataType,
     pub expiration: Option<DateTime<Utc>>,
@@ -42,5 +45,15 @@ impl RedisValue {
             None
         };
         RedisValue { value, expiration }
+    }
+
+    pub fn append_to_list(&mut self, value: String) -> Result<usize> {
+        match &mut self.value {
+            DataType::List(existing_list) => {
+                existing_list.push(value);
+                Ok(existing_list.len())
+            }
+            DataType::String(_) => Err(anyhow!("Trying to append to a string datatype")),
+        }
     }
 }

@@ -29,29 +29,23 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
                     DataType::List(vec![some_value.param_value.to_string()]),
                     None,
                 );
-                cache.insert(some_value.param_value.to_string(), redis_value);
+                cache.insert(some_key.param_value.to_string(), redis_value);
                 write_buffer.push_str(":1\r\n");
             } else {
-                // Otherwise, check if a list
-                match &mut get_value.value {
-                    DataType::List(vector) => {
-                        vector.push(some_value.param_value.clone());
-                        // let redis_value = RedisValue::new(DataType::List(vector), None);
-                        // cache.insert(some_value.param_value.to_string(), redis_value);
-                        write_buffer.push_str(&format!(":{}\r\n", vector.len()));
+                match get_value.append_to_list(some_value.param_value.clone()) {
+                    Ok(new_list_size) => {
+                        write_buffer.push_str(&format!(":{}\r\n", new_list_size));
                     }
-                    DataType::String(_) => {
-                        write_buffer.push_str("-ERR trying to RPUSH to a non-list");
-                    }
+                    Err(e) => write_buffer.push_str(&format!("-ERR {}\r\n", e)),
                 }
             }
         } else {
-            // If not, makea new list
+            // If not, make a new list
             let redis_value = RedisValue::new(
                 DataType::List(vec![some_value.param_value.to_string()]),
                 None,
             );
-            cache.insert(some_value.param_value.to_string(), redis_value);
+            cache.insert(some_key.param_value.to_string(), redis_value);
             write_buffer.push_str(":1\r\n");
         }
     } else {
