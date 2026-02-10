@@ -11,11 +11,6 @@ pub fn handle_lrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
     };
     match handle_params(&data) {
         Ok((start, stop)) => {
-            if start >= stop {
-                write_buffer.push_str("*0\r\n");
-                return;
-            }
-
             if let Ok(mut cache) = cache.lock() {
                 if let Some(get_value) = retrieve_from_cache(&mut cache, &some_key.param_value) {
                     match get_value.index_list(start, stop) {
@@ -43,17 +38,17 @@ pub fn handle_lrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
     }
 }
 
-fn handle_params(data: &RedisProtocol) -> Result<(usize, usize)> {
+fn handle_params(data: &RedisProtocol) -> Result<(i64, i64)> {
     let Some(start_param) = data.params_list.get(2) else {
         return Err(anyhow!("missing START"));
     };
     let Some(stop_param) = data.params_list.get(3) else {
         return Err(anyhow!("missing STOP"));
     };
-    let Ok(start) = start_param.param_value.parse::<usize>() else {
+    let Ok(start) = start_param.param_value.parse::<i64>() else {
         return Err(anyhow!("START must be a valid number"));
     };
-    let Ok(stop) = stop_param.param_value.parse::<usize>() else {
+    let Ok(stop) = stop_param.param_value.parse::<i64>() else {
         return Err(anyhow!("STOP must be a valid number"));
     };
     Ok((start, stop))

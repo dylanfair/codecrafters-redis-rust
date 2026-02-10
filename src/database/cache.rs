@@ -57,15 +57,38 @@ impl RedisValue {
         }
     }
 
-    pub fn index_list(&self, start: usize, stop: usize) -> Result<&[String]> {
+    pub fn index_list(&self, start: i64, stop: i64) -> Result<&[String]> {
+        println!("start: {}", start);
+        println!("stop: {}", stop);
         match &self.value {
             DataType::List(existing_list) => {
+                // Account for negative indices
+                let start = if start < 0 {
+                    existing_list.len().saturating_add_signed(start as isize)
+                } else {
+                    start as usize
+                };
+                let stop = if stop < 0 {
+                    existing_list.len().saturating_add_signed(stop as isize)
+                } else {
+                    stop as usize
+                };
+                println!("start: {}", start);
+                println!("stop: {}", stop);
+
+                // If start >= stop
+                if start >= stop {
+                    return Ok(&[]); // return empty array;
+                }
+
+                // If start larger then list
                 if start >= existing_list.len() {
                     return Ok(&[]); // return empty array;
                 }
                 if stop >= existing_list.len() {
                     return Ok(&existing_list[start..existing_list.len()]);
                 }
+                // Now slice
                 Ok(&existing_list[start..=stop])
             }
             DataType::String(_) => Err(anyhow!("Trying to index a string datatype")),
