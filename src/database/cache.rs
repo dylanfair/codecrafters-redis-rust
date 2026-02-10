@@ -66,7 +66,7 @@ impl RedisValue {
                 if stop >= existing_list.len() {
                     return Ok(&existing_list[start..existing_list.len()]);
                 }
-                Ok(&existing_list[start..stop])
+                Ok(&existing_list[start..=stop])
             }
             DataType::String(_) => Err(anyhow!("Trying to index a string datatype")),
         }
