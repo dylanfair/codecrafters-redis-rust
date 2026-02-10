@@ -58,8 +58,6 @@ impl RedisValue {
     }
 
     pub fn index_list(&self, start: i64, stop: i64) -> Result<&[String]> {
-        println!("start: {}", start);
-        println!("stop: {}", stop);
         match &self.value {
             DataType::List(existing_list) => {
                 // Account for negative indices
@@ -73,8 +71,6 @@ impl RedisValue {
                 } else {
                     stop as usize
                 };
-                println!("start: {}", start);
-                println!("stop: {}", stop);
 
                 // If start >= stop
                 if start >= stop {
