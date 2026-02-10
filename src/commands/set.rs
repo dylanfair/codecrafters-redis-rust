@@ -1,4 +1,4 @@
-use crate::database::cache::{ExpirationFidelity, RedisValue};
+use crate::database::cache::{DataType, ExpirationFidelity, RedisValue};
 use crate::protocol::parsing::RedisParam;
 use crate::{RedisCache, protocol::parsing::RedisProtocol};
 
@@ -157,25 +157,25 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
 fn make_redis_value(value: &RedisParam, set_options: &SetOptions) -> RedisValue {
     if let Some(expiration_value) = set_options.ex {
         RedisValue::new(
-            value.param_value.to_string(),
+            DataType::String(value.param_value.to_string()),
             Some(ExpirationFidelity::Ex(expiration_value)),
         )
     } else if let Some(expiration_value) = set_options.px {
         RedisValue::new(
-            value.param_value.to_string(),
+            DataType::String(value.param_value.to_string()),
             Some(ExpirationFidelity::Px(expiration_value)),
         )
     } else if let Some(expiration_value) = set_options.exat {
         RedisValue::new(
-            value.param_value.to_string(),
+            DataType::String(value.param_value.to_string()),
             Some(ExpirationFidelity::Exat(expiration_value)),
         )
     } else if let Some(expiration_value) = set_options.pxat {
         RedisValue::new(
-            value.param_value.to_string(),
+            DataType::String(value.param_value.to_string()),
             Some(ExpirationFidelity::Pxat(expiration_value)),
         )
     } else {
-        RedisValue::new(value.param_value.to_string(), None)
+        RedisValue::new(DataType::String(value.param_value.to_string()), None)
     }
 }

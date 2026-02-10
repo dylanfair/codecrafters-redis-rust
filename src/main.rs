@@ -5,8 +5,8 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use crate::commands::handle_commands;
 use crate::database::cache::RedisCache;
-use crate::protocol::handle_commands;
 use crate::protocol::parsing::RedisProtocol;
 
 mod commands;

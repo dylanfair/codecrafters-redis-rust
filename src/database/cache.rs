@@ -11,13 +11,18 @@ pub enum ExpirationFidelity {
     Pxat(u64),
 }
 
+pub enum DataType {
+    String(String),
+    List(Vec<String>),
+}
+
 pub struct RedisValue {
-    pub value: String,
+    pub value: DataType,
     pub expiration: Option<DateTime<Utc>>,
 }
 
 impl RedisValue {
-    pub fn new(value: String, expiration: Option<ExpirationFidelity>) -> RedisValue {
+    pub fn new(value: DataType, expiration: Option<ExpirationFidelity>) -> RedisValue {
         let expiration = if let Some(expiration_type) = expiration {
             match expiration_type {
                 ExpirationFidelity::Ex(duration) => {
