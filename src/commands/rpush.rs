@@ -28,6 +28,7 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
                 }
                 Err(e) => write_buffer.push_str(&format!("-{}\r\n", e)),
             }
+            cache.insert(some_key.param_value.to_string(), get_value);
         } else {
             // If not, make a new list
             let list_len = new_elements.len();
