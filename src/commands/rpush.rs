@@ -32,9 +32,10 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
                 // Remove expired value
                 cache.remove(&some_key.param_value);
                 // Then add a new list
+                let list_len = new_elements.len();
                 let redis_value = RedisValue::new(DataType::List(new_elements), None);
                 cache.insert(some_key.param_value.to_string(), redis_value);
-                write_buffer.push_str(":1\r\n");
+                write_buffer.push_str(&format!(":{}\r\n", list_len));
             } else {
                 match get_value.append_to_list(new_elements) {
                     Ok(new_list_size) => {
@@ -45,9 +46,10 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             }
         } else {
             // If not, make a new list
+            let list_len = new_elements.len();
             let redis_value = RedisValue::new(DataType::List(new_elements), None);
             cache.insert(some_key.param_value.to_string(), redis_value);
-            write_buffer.push_str(":1\r\n");
+            write_buffer.push_str(&format!(":{}\r\n", list_len));
         }
     } else {
         write_buffer.push_str("-ERR could not get lock to database\r\n");
