@@ -5,14 +5,21 @@ use crate::{
 use chrono::Utc;
 
 pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
+    // Get our key
     let Some(some_key) = data.params_list.get(1) else {
         write_buffer.push_str("-ERR missing the RPUSH key\r\n");
         return;
     };
-    let Some(some_value) = data.params_list.get(2) else {
-        write_buffer.push_str("-ERR missing the RPUSH value\r\n");
-        return;
-    };
+
+    // Get our elements
+    let mut new_elements = vec![];
+    for i in 2..data.params_n {
+        let new_value = data
+            .params_list
+            .get(i)
+            .expect("We should always have something with earlier validity check");
+        new_elements.push(new_value.param_value.clone());
+    }
 
     if let Ok(mut cache) = cache.lock() {
         // Make our value
@@ -25,14 +32,11 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
                 // Remove expired value
                 cache.remove(&some_key.param_value);
                 // Then add a new list
-                let redis_value = RedisValue::new(
-                    DataType::List(vec![some_value.param_value.to_string()]),
-                    None,
-                );
+                let redis_value = RedisValue::new(DataType::List(new_elements), None);
                 cache.insert(some_key.param_value.to_string(), redis_value);
                 write_buffer.push_str(":1\r\n");
             } else {
-                match get_value.append_to_list(some_value.param_value.clone()) {
+                match get_value.append_to_list(new_elements) {
                     Ok(new_list_size) => {
                         write_buffer.push_str(&format!(":{}\r\n", new_list_size));
                     }
@@ -41,10 +45,7 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             }
         } else {
             // If not, make a new list
-            let redis_value = RedisValue::new(
-                DataType::List(vec![some_value.param_value.to_string()]),
-                None,
-            );
+            let redis_value = RedisValue::new(DataType::List(new_elements), None);
             cache.insert(some_key.param_value.to_string(), redis_value);
             write_buffer.push_str(":1\r\n");
         }

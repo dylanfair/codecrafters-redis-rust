@@ -47,10 +47,10 @@ impl RedisValue {
         RedisValue { value, expiration }
     }
 
-    pub fn append_to_list(&mut self, value: String) -> Result<usize> {
+    pub fn append_to_list(&mut self, value: Vec<String>) -> Result<usize> {
         match &mut self.value {
             DataType::List(existing_list) => {
-                existing_list.push(value);
+                existing_list.extend(value);
                 Ok(existing_list.len())
             }
             DataType::String(_) => Err(anyhow!("Trying to append to a string datatype")),
