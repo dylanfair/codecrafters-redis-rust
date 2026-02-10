@@ -6,7 +6,7 @@ use anyhow::{Result, anyhow};
 
 pub fn handle_lrange(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
     let Some(some_key) = data.params_list.get(1) else {
-        write_buffer.push_str("-missing the SET key\r\n");
+        write_buffer.push_str("-missing the LRANGE key\r\n");
         return;
     };
     match handle_params(&data) {
@@ -44,10 +44,10 @@ pub fn handle_lrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
 }
 
 fn handle_params(data: &RedisProtocol) -> Result<(usize, usize)> {
-    let Some(start_param) = data.params_list.get(1) else {
+    let Some(start_param) = data.params_list.get(2) else {
         return Err(anyhow!("missing START"));
     };
-    let Some(stop_param) = data.params_list.get(2) else {
+    let Some(stop_param) = data.params_list.get(3) else {
         return Err(anyhow!("missing STOP"));
     };
     let Ok(start) = start_param.param_value.parse::<usize>() else {
