@@ -20,11 +20,11 @@ struct SetOptions {
 
 pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
     let Some(some_key) = data.params_list.get(1) else {
-        write_buffer.push_str("-ERR missing the SET key\r\n");
+        write_buffer.push_str("- missing the SET key\r\n");
         return;
     };
     let Some(some_value) = data.params_list.get(2) else {
-        write_buffer.push_str("-ERR missing the SET value\r\n");
+        write_buffer.push_str("- missing the SET value\r\n");
         return;
     };
 
@@ -47,7 +47,7 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                         set_options.ifeq = Some(next.param_value.to_string());
                         skip = true;
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                 }
@@ -56,7 +56,7 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                         set_options.ifne = Some(next.param_value.to_string());
                         skip = true;
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                 }
@@ -65,7 +65,7 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                         set_options.ifdeq = Some(next.param_value.to_string());
                         skip = true;
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                 }
@@ -74,7 +74,7 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                         set_options.ifdne = Some(next.param_value.to_string());
                         skip = true;
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                 }
@@ -86,11 +86,11 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                             skip = true;
                         } else {
                             write_buffer
-                                .push_str("-ERR failed to parse expiration value given\r\n");
+                                .push_str("- failed to parse expiration value given\r\n");
                             return;
                         }
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                 }
@@ -101,11 +101,11 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                             skip = true;
                         } else {
                             write_buffer
-                                .push_str("-ERR failed to parse expiration value given\r\n");
+                                .push_str("- failed to parse expiration value given\r\n");
                             return;
                         }
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                 }
@@ -115,11 +115,11 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                             set_options.exat = Some(expiration_value);
                         } else {
                             write_buffer
-                                .push_str("-ERR failed to parse expiration timestamp given\r\n");
+                                .push_str("- failed to parse expiration timestamp given\r\n");
                             return;
                         }
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                     skip = true;
@@ -130,11 +130,11 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                             set_options.pxat = Some(expiration_value);
                         } else {
                             write_buffer
-                                .push_str("-ERR failed to parse expiration timestamp given\r\n");
+                                .push_str("- failed to parse expiration timestamp given\r\n");
                             return;
                         }
                     } else {
-                        write_buffer.push_str("-ERR missing parameter\r\n");
+                        write_buffer.push_str("- missing parameter\r\n");
                         return;
                     }
                     skip = true;
@@ -150,7 +150,7 @@ pub fn handle_set(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
         cache.insert(some_key.param_value.to_string(), redis_value);
         write_buffer.push_str("+OK\r\n");
     } else {
-        write_buffer.push_str("-ERR could not get lock to database\r\n");
+        write_buffer.push_str("- could not get lock to database\r\n");
     }
 }
 

@@ -107,5 +107,5 @@ fn send_response(stream: &mut TcpStream, write_buf: &mut String) {
 
 fn send_error(stream: &mut TcpStream, error: &str) {
     eprintln!("{}", error);
-    send_response(stream, &mut format!("-ERR {}\r\n", error));
+    send_response(stream, &mut format!("- {}\r\n", error));
 }

@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub type RedisCache = Arc<Mutex<HashMap<String, RedisValue>>>;
 
@@ -12,13 +12,13 @@ pub enum ExpirationFidelity {
     Pxat(u64),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DataType {
     String(String),
     List(Vec<String>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RedisValue {
     pub value: DataType,
     pub expiration: Option<DateTime<Utc>>,
@@ -55,5 +55,40 @@ impl RedisValue {
             }
             DataType::String(_) => Err(anyhow!("Trying to append to a string datatype")),
         }
+    }
+
+    pub fn index_list(&self, start: usize, stop: usize) -> Result<&[String]> {
+        match &self.value {
+            DataType::List(existing_list) => {
+                if start >= existing_list.len() {
+                    return Ok(&[]); // return empty array;
+                }
+                if stop >= existing_list.len() {
+                    return Ok(&existing_list[start..existing_list.len()]);
+                }
+                Ok(&existing_list[start..stop])
+            }
+            DataType::String(_) => Err(anyhow!("Trying to index a string datatype")),
+        }
+    }
+}
+
+pub fn retrieve_from_cache(
+    cache: &mut MutexGuard<'_, HashMap<String, RedisValue>>,
+    key: &str,
+) -> Option<RedisValue> {
+    if let Some(value) = cache.get(key) {
+        // Check for expiration
+        if let Some(expiration) = value.expiration
+            && !Utc::now().le(&expiration)
+        {
+            // Remove expired value
+            cache.remove(key);
+            None
+        } else {
+            Some(value.clone())
+        }
+    } else {
+        None
     }
 }

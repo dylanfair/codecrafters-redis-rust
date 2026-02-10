@@ -8,6 +8,6 @@ pub fn handle_echo(data: RedisProtocol, write_buffer: &mut String) {
         );
         write_buffer.push_str(&response);
     } else {
-        write_buffer.push_str("-ERR no response to ECHO\r\n");
+        write_buffer.push_str("-no response to ECHO\r\n");
     }
 }
