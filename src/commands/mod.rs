@@ -1,3 +1,4 @@
+pub mod blpop;
 pub mod echo;
 pub mod get;
 pub mod llen;
@@ -7,6 +8,7 @@ pub mod rpush;
 pub mod set;
 
 use crate::RedisCache;
+use crate::commands::blpop::handle_blpop;
 use crate::commands::llen::handle_llen;
 use crate::commands::lpop::handle_lpop;
 use crate::commands::lrange::handle_lrange;
@@ -26,6 +28,7 @@ pub fn handle_commands(redis_data: RedisProtocol, write_buffer: &mut String, cac
             "llen" => handle_llen(redis_data, write_buffer, cache),
             "lrange" => handle_lrange(redis_data, write_buffer, cache),
             "lpop" => handle_lpop(redis_data, write_buffer, cache),
+            "blpop" => handle_blpop(redis_data, write_buffer, cache),
             _ => {}
         }
     } else {
