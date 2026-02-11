@@ -60,8 +60,8 @@ impl RedisValue {
     pub fn prepend_to_list(&mut self, value: Vec<String>) -> Result<usize> {
         match &mut self.value {
             DataType::List(existing_list) => {
-                for ele in value.iter().rev() {
-                    existing_list.push(ele.clone());
+                for ele in value {
+                    existing_list.insert(0, ele.clone())
                 }
                 Ok(existing_list.len())
             }

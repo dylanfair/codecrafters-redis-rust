@@ -3,7 +3,6 @@ use crate::{
     protocol::parsing::RedisProtocol,
 };
 
-#[derive(PartialEq)]
 pub enum PushType {
     Rpush,
     Lpush,
@@ -30,13 +29,13 @@ pub fn handle_xpush(
             .expect("We should always have something with earlier validity check");
         new_elements.push(new_value.param_value.clone());
     }
-    if push == PushType::Lpush {
-        new_elements.reverse();
-    }
 
     if let Ok(mut cache) = cache.lock() {
         if let Some(mut get_value) = retrieve_from_cache(&mut cache, &some_key.param_value) {
-            let push_result = get_value.append_to_list(new_elements);
+            let push_result = match push {
+                PushType::Rpush => get_value.append_to_list(new_elements),
+                PushType::Lpush => get_value.prepend_to_list(new_elements),
+            };
             match push_result {
                 Ok(new_list_size) => {
                     cache.insert(some_key.param_value.to_string(), get_value);
@@ -47,7 +46,13 @@ pub fn handle_xpush(
         } else {
             // If not, make a new list
             let list_len = new_elements.len();
-            let redis_value = RedisValue::new(DataType::List(new_elements), None);
+            let redis_value = match push {
+                PushType::Rpush => RedisValue::new(DataType::List(new_elements), None),
+                PushType::Lpush => {
+                    new_elements.reverse();
+                    RedisValue::new(DataType::List(new_elements), None)
+                }
+            };
             cache.insert(some_key.param_value.to_string(), redis_value);
             write_buffer.push_str(&format!(":{}\r\n", list_len));
         }
