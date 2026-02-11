@@ -109,6 +109,16 @@ impl RedisValue {
             DataType::String(_) => Err(anyhow!("LLEN key provided is for a string value")),
         }
     }
+
+    pub fn lpop_list(&mut self) -> Result<String> {
+        match &mut self.value {
+            DataType::List(existing_list) => {
+                let popped_element = existing_list.remove(0);
+                Ok(popped_element)
+            }
+            DataType::String(_) => Err(anyhow!("LPOP key provided is for a string value")),
+        }
+    }
 }
 
 pub fn retrieve_from_cache(
