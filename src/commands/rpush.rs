@@ -16,7 +16,7 @@ pub fn handle_xpush(
 ) {
     // Get our key
     let Some(some_key) = data.params_list.get(1) else {
-        write_buffer.push_str("- missing the RPUSH key\r\n");
+        write_buffer.push_str("-missing the RPUSH key\r\n");
         return;
     };
 

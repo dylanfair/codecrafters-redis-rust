@@ -102,6 +102,13 @@ impl RedisValue {
             DataType::String(_) => Err(anyhow!("Trying to index a string datatype")),
         }
     }
+
+    pub fn get_list_len(&self) -> Result<usize> {
+        match &self.value {
+            DataType::List(existing_list) => Ok(existing_list.len()),
+            DataType::String(_) => Err(anyhow!("LLEN key provided is for a string value")),
+        }
+    }
 }
 
 pub fn retrieve_from_cache(
