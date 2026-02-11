@@ -1,6 +1,6 @@
 use crate::{
     database::cache::{RedisCache, retrieve_from_cache},
-    protocol::parsing::RedisProtocol,
+    protocol::{parsing::RedisProtocol, writing::resp_encode_array},
 };
 use anyhow::{Result, anyhow};
 
@@ -18,11 +18,7 @@ pub fn handle_lrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
                             if list_slice.is_empty() {
                                 write_buffer.push_str("*0\r\n");
                             } else {
-                                write_buffer.push_str(&format!("*{}\r\n", list_slice.len()));
-                                for element in list_slice {
-                                    write_buffer.push_str(&format!("${}\r\n", element.len()));
-                                    write_buffer.push_str(&format!("{}\r\n", element));
-                                }
+                                resp_encode_array(list_slice, write_buffer);
                             }
                         }
                         Err(e) => write_buffer.push_str(&format!("-{}\r\n", e)),

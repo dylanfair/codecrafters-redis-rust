@@ -110,11 +110,11 @@ impl RedisValue {
         }
     }
 
-    pub fn lpop_list(&mut self) -> Result<String> {
+    pub fn lpop_list(&mut self, amount: usize) -> Result<Vec<String>> {
         match &mut self.value {
             DataType::List(existing_list) => {
-                let popped_element = existing_list.remove(0);
-                Ok(popped_element)
+                let popped = existing_list.drain(0..amount).collect();
+                Ok(popped)
             }
             DataType::String(_) => Err(anyhow!("LPOP key provided is for a string value")),
         }
