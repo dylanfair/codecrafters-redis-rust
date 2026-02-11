@@ -29,7 +29,13 @@ pub fn handle_lpop(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
             match get_value.lpop_list(pop_amount) {
                 Ok(popped) => {
                     cache.insert(some_key.param_value.to_string(), get_value);
-                    resp_encode_array(&popped, write_buffer);
+                    if popped.len() == 1 {
+                        let ele = popped.first().unwrap();
+                        write_buffer.push_str(&format!("${}\r\n", ele.len()));
+                        write_buffer.push_str(&format!("{}\r\n", ele));
+                    } else {
+                        resp_encode_array(&popped, write_buffer);
+                    }
                 }
                 Err(e) => write_buffer.push_str(&format!("-{}\r\n", e)),
             }
