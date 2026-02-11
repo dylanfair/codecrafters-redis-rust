@@ -3,7 +3,18 @@ use crate::{
     protocol::parsing::RedisProtocol,
 };
 
-pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
+#[derive(PartialEq)]
+pub enum PushType {
+    Rpush,
+    Lpush,
+}
+
+pub fn handle_xpush(
+    data: RedisProtocol,
+    write_buffer: &mut String,
+    cache: &RedisCache,
+    push: PushType,
+) {
     // Get our key
     let Some(some_key) = data.params_list.get(1) else {
         write_buffer.push_str("- missing the RPUSH key\r\n");
@@ -19,16 +30,20 @@ pub fn handle_rpush(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             .expect("We should always have something with earlier validity check");
         new_elements.push(new_value.param_value.clone());
     }
+    if push == PushType::Lpush {
+        new_elements.reverse();
+    }
 
     if let Ok(mut cache) = cache.lock() {
         if let Some(mut get_value) = retrieve_from_cache(&mut cache, &some_key.param_value) {
-            match get_value.append_to_list(new_elements) {
+            let push_result = get_value.append_to_list(new_elements);
+            match push_result {
                 Ok(new_list_size) => {
+                    cache.insert(some_key.param_value.to_string(), get_value);
                     write_buffer.push_str(&format!(":{}\r\n", new_list_size));
                 }
                 Err(e) => write_buffer.push_str(&format!("-{}\r\n", e)),
             }
-            cache.insert(some_key.param_value.to_string(), get_value);
         } else {
             // If not, make a new list
             let list_len = new_elements.len();

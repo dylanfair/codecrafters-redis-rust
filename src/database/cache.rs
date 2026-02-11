@@ -57,6 +57,18 @@ impl RedisValue {
         }
     }
 
+    pub fn prepend_to_list(&mut self, value: Vec<String>) -> Result<usize> {
+        match &mut self.value {
+            DataType::List(existing_list) => {
+                for ele in value.iter().rev() {
+                    existing_list.push(ele.clone());
+                }
+                Ok(existing_list.len())
+            }
+            DataType::String(_) => Err(anyhow!("Trying to append to a string datatype")),
+        }
+    }
+
     pub fn index_list(&self, start: i64, stop: i64) -> Result<&[String]> {
         match &self.value {
             DataType::List(existing_list) => {
