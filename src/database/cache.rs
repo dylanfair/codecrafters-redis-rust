@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 pub type RedisCache = Arc<Mutex<HashMap<String, RedisValue>>>;
@@ -27,6 +28,20 @@ pub enum DataType {
 pub struct RedisValue {
     pub value: DataType,
     pub expiration: Option<DateTime<Utc>>,
+}
+
+impl RedisValue {
+    pub fn datatype_str(&self) -> String {
+        match self.value {
+            DataType::String(_) => "string".to_string(),
+            DataType::List(_) => "list".to_string(),
+            DataType::Set(_) => "set".to_string(),
+            DataType::Zset(_) => "zset".to_string(),
+            DataType::Hash(_) => "hash".to_string(),
+            DataType::Stream(_) => "stream".to_string(),
+            DataType::Vectorset(_) => "vectorset".to_string(),
+        }
+    }
 }
 
 impl RedisValue {
