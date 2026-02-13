@@ -6,6 +6,7 @@ pub mod lpop;
 pub mod lrange;
 pub mod rpush;
 pub mod set;
+pub mod type_redis;
 
 use crate::RedisCache;
 use crate::commands::blpop::handle_blpop;
@@ -13,6 +14,7 @@ use crate::commands::llen::handle_llen;
 use crate::commands::lpop::handle_lpop;
 use crate::commands::lrange::handle_lrange;
 use crate::commands::rpush::{PushType, handle_xpush};
+use crate::commands::type_redis::handle_type;
 use crate::commands::{echo::handle_echo, get::handle_get, set::handle_set};
 use crate::protocol::parsing::RedisProtocol;
 
@@ -29,9 +31,10 @@ pub fn handle_commands(redis_data: RedisProtocol, write_buffer: &mut String, cac
             "lrange" => handle_lrange(redis_data, write_buffer, cache),
             "lpop" => handle_lpop(redis_data, write_buffer, cache),
             "blpop" => handle_blpop(redis_data, write_buffer, cache),
-            _ => {}
+            "type" => handle_type(redis_data, write_buffer, cache),
+            _ => write_buffer.push_str("-unrecognized command\r\n"),
         }
     } else {
-        write_buffer.push_str("- no command to run\r\n")
+        write_buffer.push_str("-no command to run\r\n")
     }
 }

@@ -16,6 +16,11 @@ pub enum ExpirationFidelity {
 pub enum DataType {
     String(String),
     List(Vec<String>),
+    Set(Vec<String>),
+    Zset(Vec<String>),
+    Hash(String),
+    Stream(String),
+    Vectorset(Vec<String>),
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +59,7 @@ impl RedisValue {
                 Ok(existing_list.len())
             }
             DataType::String(_) => Err(anyhow!("Trying to append to a string datatype")),
+            _ => Err(anyhow!("Got a DataType that isn't implemented yet")),
         }
     }
 
@@ -66,6 +72,7 @@ impl RedisValue {
                 Ok(existing_list.len())
             }
             DataType::String(_) => Err(anyhow!("Trying to append to a string datatype")),
+            _ => Err(anyhow!("Got a DataType that isn't implemented yet")),
         }
     }
 
@@ -100,6 +107,7 @@ impl RedisValue {
                 Ok(&existing_list[start..=stop])
             }
             DataType::String(_) => Err(anyhow!("Trying to index a string datatype")),
+            _ => Err(anyhow!("Got a DataType that isn't implemented yet")),
         }
     }
 
@@ -107,16 +115,21 @@ impl RedisValue {
         match &self.value {
             DataType::List(existing_list) => Ok(existing_list.len()),
             DataType::String(_) => Err(anyhow!("LLEN key provided is for a string value")),
+            _ => Err(anyhow!("Got a DataType that isn't implemented yet")),
         }
     }
 
     pub fn lpop_list(&mut self, amount: usize) -> Result<Vec<String>> {
         match &mut self.value {
             DataType::List(existing_list) => {
+                if existing_list.is_empty() {
+                    return Ok(vec![]);
+                }
                 let popped = existing_list.drain(0..amount).collect();
                 Ok(popped)
             }
             DataType::String(_) => Err(anyhow!("LPOP key provided is for a string value")),
+            _ => Err(anyhow!("Got a DataType that isn't implemented yet")),
         }
     }
 }

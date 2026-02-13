@@ -16,6 +16,21 @@ pub fn handle_get(data: RedisProtocol, write_buffer: &mut String, cache: &RedisC
                     DataType::List(_list) => {
                         todo!();
                     }
+                    DataType::Set(_set) => {
+                        todo!();
+                    }
+                    DataType::Zset(_zset) => {
+                        todo!();
+                    }
+                    DataType::Hash(_hash) => {
+                        todo!();
+                    }
+                    DataType::Stream(_stream) => {
+                        todo!();
+                    }
+                    DataType::Vectorset(_vectorset) => {
+                        todo!();
+                    }
                 }
             } else {
                 write_buffer.push_str("$-1\r\n");

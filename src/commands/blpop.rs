@@ -37,6 +37,9 @@ pub fn handle_blpop(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             if let Some(mut get_value) = retrieve_from_cache(&mut cache, &some_key.param_value) {
                 match get_value.lpop_list(1) {
                     Ok(popped) => {
+                        if popped.is_empty() {
+                            continue;
+                        }
                         cache.insert(some_key.param_value.to_string(), get_value);
                         let blpop_vec = vec![
                             some_key.param_value.to_string(),
