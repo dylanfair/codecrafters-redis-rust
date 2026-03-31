@@ -21,10 +21,6 @@ impl EntryId {
             sequence_number,
         }
     }
-
-    fn greater_than_zero(&self) -> bool {
-        !(self.milliseconds_time == 0 && self.sequence_number == 0)
-    }
 }
 
 impl PartialOrd for EntryId {
@@ -42,19 +38,25 @@ impl TryFrom<String> for EntryId {
 
     fn try_from(id: String) -> Result<Self, Self::Error> {
         if let Some(split) = id.split_once("-") {
-            let milliseconds = split.0.parse::<u64>();
-            let sequence = split.1.parse::<u64>();
+            let milliseconds_parsed = split.0.parse::<u64>();
+            let sequence_parsed = split.1.parse::<u64>();
 
-            if milliseconds.is_err() || sequence.is_err() {
-                return Err("Entry ID must be in the format of <milliseconds>-<sequence number>");
+            if milliseconds_parsed.is_err() || sequence_parsed.is_err() {
+                return Err(
+                    "ERR Entry ID must be in the format of <milliseconds>-<sequence number>",
+                );
             }
 
-            Ok(EntryId::new(
-                milliseconds.expect("Milliseconds already checked"),
-                sequence.expect("Sequence already checked"),
-            ))
+            let milliseconds = milliseconds_parsed.expect("Milliseconds already checked");
+            let sequence = sequence_parsed.expect("Secquence already checked");
+
+            if milliseconds == 0 && sequence == 0 {
+                return Err("ERR The ID specified in XADD must be greater than 0-0");
+            }
+
+            Ok(EntryId::new(milliseconds, sequence))
         } else {
-            Err("Entry ID must be in the format of <milliseconds>-<sequence number>")
+            Err("ERR Entry ID must be in the format of <milliseconds>-<sequence number>")
         }
     }
 }
@@ -103,15 +105,9 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
             }
         }
     } else {
-        // we are pushing into an empty stream - check if ID is greater than 0-0
+        // Check if try from fails (can catch 0-0)
         match EntryId::try_from(some_stream_key_value.param_value.to_string()) {
-            Ok(new_id) => {
-                if !new_id.greater_than_zero() {
-                    write_buffer
-                        .push_str("-ERR The ID specified in XADD must be greater than 0-0\r\n");
-                    return;
-                }
-            }
+            Ok(_) => {}
             Err(e) => {
                 write_buffer.push_str(&format!("-{}\r\n", e));
                 return;
