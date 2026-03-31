@@ -53,7 +53,10 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
 
     if let Ok(mut cache) = cache.lock() {
         cache.insert(some_stream_key.param_value.to_string(), stream_obj);
-        write_buffer.push_str(&format!("+{}\r\n", some_stream_key_value.param_value));
+        write_buffer.push_str(&format!(
+            "${}\r\n{}\r\n",
+            some_stream_key_value.param_size, some_stream_key_value.param_value
+        ));
     } else {
         write_buffer.push_str("- could not get lock to database\r\n");
     }
