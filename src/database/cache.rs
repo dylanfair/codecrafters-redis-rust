@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Display;
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -20,7 +20,7 @@ pub enum DataType {
     Set(Vec<String>),
     Zset(Vec<String>),
     Hash(String),
-    Stream(HashMap<String, String>),
+    Stream(BTreeMap<String, HashMap<String, String>>),
     Vectorset(Vec<String>),
 }
 
@@ -148,12 +148,22 @@ impl RedisValue {
         }
     }
 
-    pub fn stream_insert(&mut self, key: &str, value: &str) -> Result<usize> {
+    pub fn stream_insert(&mut self, key: &str, value: HashMap<String, String>) -> Result<usize> {
         match &mut self.value {
             DataType::Stream(existing_stream) => {
-                existing_stream.insert(key.to_string(), value.to_string());
+                existing_stream.insert(key.to_string(), value);
                 Ok(existing_stream.len())
             }
+            _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
+        }
+    }
+
+    pub fn get_latest_stream_id(&self) -> Result<Option<String>> {
+        match &self.value {
+            DataType::Stream(existing_stream) => match existing_stream.last_key_value() {
+                Some(latest_entry) => Ok(Some(latest_entry.0.to_string())),
+                None => Ok(None),
+            },
             _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
         }
     }
