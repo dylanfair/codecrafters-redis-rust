@@ -96,7 +96,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
         if let Some(split) = new_id_string.split_once("-") {
             if split.1 == "*" && split.0 == latest_id.milliseconds_time.to_string() {
                 new_id_string = format!("{}-{}", split.0, latest_id.sequence_number + 1);
-            } else {
+            } else if split.1 == "*" {
                 new_id_string = format!("{}-{}", split.0, 0);
             }
         } else if new_id_string == "*" {
