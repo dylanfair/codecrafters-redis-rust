@@ -89,9 +89,21 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
     }
 
     // Validate ID here
+    let mut new_id_string = some_stream_key_value.param_value.to_string();
     if check_id_validity && let Ok(Some(id)) = stream_obj.get_latest_stream_id() {
         let latest_id = EntryId::try_from(id).expect("Came from existing stream");
-        match EntryId::try_from(some_stream_key_value.param_value.to_string()) {
+
+        if let Some(split) = new_id_string.split_once("-") {
+            if split.1 == "*" && split.0 == latest_id.milliseconds_time.to_string() {
+                new_id_string = format!("{}-{}", split.0, latest_id.sequence_number + 1);
+            } else {
+                new_id_string = format!("{}-{}", split.0, 0);
+            }
+        } else if new_id_string == "*" {
+            todo!()
+        }
+
+        match EntryId::try_from(new_id_string.clone()) {
             Ok(new_id) => {
                 // compare here
                 if new_id <= latest_id {
@@ -105,8 +117,21 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
             }
         }
     } else {
+        // Check for *
+        if let Some(split) = new_id_string.split_once("-") {
+            if split.1 == "*" {
+                if split.0 == "0" {
+                    new_id_string = format!("{}-{}", split.0, "1");
+                } else {
+                    new_id_string = format!("{}-{}", split.0, "0");
+                }
+            }
+        } else if new_id_string == "*" {
+            todo!();
+        }
+
         // Check if try from fails (can catch 0-0)
-        match EntryId::try_from(some_stream_key_value.param_value.to_string()) {
+        match EntryId::try_from(new_id_string.clone()) {
             Ok(_) => {}
             Err(e) => {
                 write_buffer.push_str(&format!("-{}\r\n", e));
@@ -117,7 +142,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
 
     // After validation
     let mut new_entry = HashMap::new();
-    new_entry.insert("id".to_string(), some_stream_key_value.param_value.clone());
+    new_entry.insert("id".to_string(), new_id_string.clone());
 
     let mut counter = 3;
     loop {
@@ -132,7 +157,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
         counter += 2
     }
 
-    match stream_obj.stream_insert(&some_stream_key_value.param_value, new_entry) {
+    match stream_obj.stream_insert(&new_id_string, new_entry) {
         Ok(_) => {}
         Err(e) => {
             write_buffer.push_str(&format!("-{}\r\n", e));
@@ -144,7 +169,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
         cache.insert(some_stream_key.param_value.to_string(), stream_obj);
         write_buffer.push_str(&format!(
             "${}\r\n{}\r\n",
-            some_stream_key_value.param_size, some_stream_key_value.param_value
+            some_stream_key_value.param_size, new_id_string
         ));
     } else {
         write_buffer.push_str("- could not get lock to database\r\n");
