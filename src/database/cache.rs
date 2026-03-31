@@ -20,7 +20,7 @@ pub enum DataType {
     Set(Vec<String>),
     Zset(Vec<String>),
     Hash(String),
-    Stream(String),
+    Stream(HashMap<String, String>),
     Vectorset(Vec<String>),
 }
 
@@ -145,6 +145,16 @@ impl RedisValue {
             }
             DataType::String(_) => Err(anyhow!("LPOP key provided is for a string value")),
             _ => Err(anyhow!("Got a DataType that isn't implemented yet")),
+        }
+    }
+
+    pub fn stream_insert(&mut self, key: &str, value: &str) -> Result<usize> {
+        match &mut self.value {
+            DataType::Stream(existing_stream) => {
+                existing_stream.insert(key.to_string(), value.to_string());
+                Ok(existing_stream.len())
+            }
+            _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
         }
     }
 }
