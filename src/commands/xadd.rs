@@ -43,7 +43,7 @@ impl TryFrom<String> for EntryId {
     fn try_from(id: String) -> Result<Self, Self::Error> {
         if let Some(split) = id.split_once("-") {
             let milliseconds = split.0.parse::<u64>();
-            let sequence = split.0.parse::<u64>();
+            let sequence = split.1.parse::<u64>();
 
             if milliseconds.is_err() || sequence.is_err() {
                 return Err("Entry ID must be in the format of <milliseconds>-<sequence number>");
