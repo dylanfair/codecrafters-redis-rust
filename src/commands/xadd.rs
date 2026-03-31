@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::{cmp::PartialOrd, collections::HashMap};
 
+use chrono::Utc;
+
 use crate::{
     RedisCache,
     database::cache::{DataType, RedisValue, retrieve_from_cache},
@@ -100,7 +102,17 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
                 new_id_string = format!("{}-{}", split.0, 0);
             }
         } else if new_id_string == "*" {
-            todo!()
+            // calculate time in milliseconds
+            let now_millis = Utc::now().timestamp_millis();
+            if now_millis as u64 == latest_id.milliseconds_time {
+                new_id_string = format!(
+                    "{}-{}",
+                    latest_id.milliseconds_time,
+                    latest_id.sequence_number + 1
+                );
+            } else {
+                new_id_string = format!("{}-{}", now_millis, "0");
+            }
         }
 
         match EntryId::try_from(new_id_string.clone()) {
@@ -127,7 +139,9 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
                 }
             }
         } else if new_id_string == "*" {
-            todo!();
+            // calculate time in milliseconds
+            let now_millis = Utc::now().timestamp_millis();
+            new_id_string = format!("{}-{}", now_millis, "0");
         }
 
         // Check if try from fails (can catch 0-0)
