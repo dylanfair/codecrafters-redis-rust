@@ -1,6 +1,7 @@
+use indexmap::IndexMap;
+use std::cmp::PartialOrd;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
-use std::{cmp::PartialOrd, collections::HashMap};
 
 use chrono::Utc;
 
@@ -10,8 +11,8 @@ use crate::{
     protocol::parsing::RedisProtocol,
 };
 
-#[derive(PartialEq)]
-struct EntryId {
+#[derive(PartialEq, Clone, Debug, Ord, Eq)]
+pub struct EntryId {
     milliseconds_time: u64,
     sequence_number: u64,
 }
@@ -22,6 +23,10 @@ impl EntryId {
             milliseconds_time,
             sequence_number,
         }
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{}-{}", self.milliseconds_time, self.sequence_number)
     }
 }
 
@@ -92,6 +97,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
 
     // Validate ID here
     let mut new_id_string = some_stream_key_value.param_value.to_string();
+    let new_entry_id: EntryId;
     if check_id_validity && let Ok(Some(id)) = stream_obj.get_latest_stream_id() {
         let latest_id = EntryId::try_from(id).expect("Came from existing stream");
 
@@ -122,6 +128,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
                     write_buffer.push_str("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n");
                     return;
                 }
+                new_entry_id = new_id;
             }
             Err(e) => {
                 write_buffer.push_str(&format!("-{}\r\n", e));
@@ -146,7 +153,9 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
 
         // Check if try from fails (can catch 0-0)
         match EntryId::try_from(new_id_string.clone()) {
-            Ok(_) => {}
+            Ok(new_id) => {
+                new_entry_id = new_id;
+            }
             Err(e) => {
                 write_buffer.push_str(&format!("-{}\r\n", e));
                 return;
@@ -155,7 +164,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
     }
 
     // After validation
-    let mut new_entry = HashMap::new();
+    let mut new_entry = IndexMap::new();
     new_entry.insert("id".to_string(), new_id_string.clone());
 
     let mut counter = 3;
@@ -171,7 +180,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
         counter += 2
     }
 
-    match stream_obj.stream_insert(&new_id_string, new_entry) {
+    match stream_obj.stream_insert(new_entry_id, new_entry) {
         Ok(_) => {}
         Err(e) => {
             write_buffer.push_str(&format!("-{}\r\n", e));

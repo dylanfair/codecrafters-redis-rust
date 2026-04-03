@@ -1,8 +1,11 @@
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
+use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
-use std::fmt::Display;
+use std::ops::Bound::Included;
 use std::sync::{Arc, Mutex, MutexGuard};
+
+use crate::commands::xadd::EntryId;
 
 pub type RedisCache = Arc<Mutex<HashMap<String, RedisValue>>>;
 
@@ -20,7 +23,7 @@ pub enum DataType {
     Set(Vec<String>),
     Zset(Vec<String>),
     Hash(String),
-    Stream(BTreeMap<String, HashMap<String, String>>),
+    Stream(BTreeMap<EntryId, IndexMap<String, String>>),
     Vectorset(Vec<String>),
 }
 
@@ -148,22 +151,68 @@ impl RedisValue {
         }
     }
 
-    pub fn stream_insert(&mut self, key: &str, value: HashMap<String, String>) -> Result<usize> {
+    pub fn stream_insert(
+        &mut self,
+        key: EntryId,
+        value: IndexMap<String, String>,
+    ) -> Result<usize> {
         match &mut self.value {
             DataType::Stream(existing_stream) => {
-                existing_stream.insert(key.to_string(), value);
+                existing_stream.insert(key, value);
                 Ok(existing_stream.len())
             }
             _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
         }
     }
 
-    pub fn get_latest_stream_id(&self) -> Result<Option<String>> {
+    pub fn get_latest_stream_id(&self) -> Result<Option<EntryId>> {
         match &self.value {
             DataType::Stream(existing_stream) => match existing_stream.last_key_value() {
-                Some(latest_entry) => Ok(Some(latest_entry.0.to_string())),
+                Some(latest_entry) => Ok(Some(latest_entry.0.clone())),
                 None => Ok(None),
             },
+            _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
+        }
+    }
+
+    pub fn stream_xrange(&self, start: EntryId, end: EntryId) -> Result<String> {
+        match &self.value {
+            DataType::Stream(existing_stream) => {
+                let mut entry_strings = vec![];
+                let mut entry_count = 0;
+                let mut output = String::new();
+                for (key, entry) in existing_stream.range(Included(start)..Included(end)) {
+                    entry_count += 1;
+
+                    let mut entry_output = String::new();
+                    let entry_len = entry.len() * 2 - 2; // removing 'id' from the count
+
+                    // Push in length of sub-array (always 2)
+                    entry_output.push_str("*2\r\n");
+
+                    // Push in ID
+                    let id = entry.get("id").expect("'id' should always be there");
+                    entry_output.push_str(&format!("${}\r\n{}\r\n", id.len(), id));
+
+                    // Push in list of values (leaving out ID)
+                    entry_output.push_str(&format!("*{}\r\n", entry_len));
+                    for (key, value) in entry {
+                        if key == "id" {
+                            continue;
+                        }
+                        entry_output.push_str(&format!("${}\r\n{}\r\n", key.len(), key));
+                        entry_output.push_str(&format!("${}\r\n{}\r\n", value.len(), value));
+                    }
+                    entry_strings.push(entry_output);
+                }
+
+                // Push total list of values
+                output.push_str(&format!("*{}\r\n", entry_count));
+                for sub_string in entry_strings {
+                    output.push_str(&sub_string);
+                }
+                return Ok(output);
+            }
             _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
         }
     }
