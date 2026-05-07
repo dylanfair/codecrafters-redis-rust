@@ -5,9 +5,15 @@ use crate::{
     protocol::parsing::RedisProtocol,
 };
 
-pub fn handle_xrange(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
+pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
+    let Some(_) = data.params_list.get(1) else {
+        write_buffer.push_str("-ERR missing the STREAMS\r\n");
+        return;
+    };
+
+    // Need to loop over and make an indexmap of stream keys with EntryIds
     let Some(some_stream_key) = data.params_list.get(1) else {
-        write_buffer.push_str("-ERR missing the stream key\r\n");
+        write_buffer.push_str("-ERR missing the STREAMS\r\n");
         return;
     };
 

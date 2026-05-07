@@ -9,6 +9,7 @@ pub mod set;
 pub mod type_redis;
 pub mod xadd;
 pub mod xrange;
+pub mod xread;
 
 use crate::RedisCache;
 use crate::commands::blpop::handle_blpop;
@@ -19,6 +20,7 @@ use crate::commands::rpush::{PushType, handle_xpush};
 use crate::commands::type_redis::handle_type;
 use crate::commands::xadd::handle_xadd;
 use crate::commands::xrange::handle_xrange;
+use crate::commands::xread::handle_xread;
 use crate::commands::{echo::handle_echo, get::handle_get, set::handle_set};
 use crate::protocol::parsing::RedisProtocol;
 
@@ -38,6 +40,7 @@ pub fn handle_commands(redis_data: RedisProtocol, write_buffer: &mut String, cac
             "type" => handle_type(redis_data, write_buffer, cache),
             "xadd" => handle_xadd(redis_data, write_buffer, cache),
             "xrange" => handle_xrange(redis_data, write_buffer, cache),
+            "xread" => handle_xread(redis_data, write_buffer, cache),
             _ => write_buffer.push_str("-unrecognized command\r\n"),
         }
     } else {
