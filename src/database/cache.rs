@@ -2,7 +2,6 @@ use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use indexmap::IndexMap;
 use std::collections::{BTreeMap, HashMap};
-use std::ops::Bound::Included;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::commands::xadd::EntryId;
@@ -181,7 +180,7 @@ impl RedisValue {
                 let mut entry_strings = vec![];
                 let mut entry_count = 0;
                 let mut output = String::new();
-                for (key, entry) in existing_stream.range(Included(start)..Included(end)) {
+                for (key, entry) in existing_stream.range(start..end) {
                     entry_count += 1;
 
                     let mut entry_output = String::new();
@@ -211,7 +210,7 @@ impl RedisValue {
                 for sub_string in entry_strings {
                     output.push_str(&sub_string);
                 }
-                return Ok(output);
+                Ok(output)
             }
             _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
         }

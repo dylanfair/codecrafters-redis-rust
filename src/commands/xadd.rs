@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
-use std::cmp::PartialOrd;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
+use std::{cmp::PartialOrd, fmt::Display};
 
 use chrono::Utc;
 
@@ -11,7 +11,7 @@ use crate::{
     protocol::parsing::RedisProtocol,
 };
 
-#[derive(PartialEq, Clone, Debug, Ord, Eq)]
+#[derive(PartialEq, Clone, Debug, Eq, Ord, PartialOrd)]
 pub struct EntryId {
     milliseconds_time: u64,
     sequence_number: u64,
@@ -24,21 +24,26 @@ impl EntryId {
             sequence_number,
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-        format!("{}-{}", self.milliseconds_time, self.sequence_number)
+impl Display for EntryId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{}", self.milliseconds_time, self.sequence_number)
     }
 }
 
-impl PartialOrd for EntryId {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        if self.milliseconds_time == other.milliseconds_time {
-            self.sequence_number.partial_cmp(&other.sequence_number)
-        } else {
-            self.milliseconds_time.partial_cmp(&other.milliseconds_time)
-        }
-    }
-}
+// impl PartialOrd for EntryId {
+//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//         Some(self.cmp(other))
+//     }
+//     // fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+//     //     if self.milliseconds_time == other.milliseconds_time {
+//     //         self.sequence_number.partial_cmp(&other.sequence_number)
+//     //     } else {
+//     //         self.milliseconds_time.partial_cmp(&other.milliseconds_time)
+//     //     }
+//     // }
+// }
 
 impl TryFrom<String> for EntryId {
     type Error = &'static str;
@@ -99,7 +104,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
     let mut new_id_string = some_stream_key_value.param_value.to_string();
     let new_entry_id: EntryId;
     if check_id_validity && let Ok(Some(id)) = stream_obj.get_latest_stream_id() {
-        let latest_id = EntryId::try_from(id).expect("Came from existing stream");
+        let latest_id = id;
 
         if let Some(split) = new_id_string.split_once("-") {
             if split.1 == "*" && split.0 == latest_id.milliseconds_time.to_string() {
@@ -168,10 +173,7 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
     new_entry.insert("id".to_string(), new_id_string.clone());
 
     let mut counter = 3;
-    loop {
-        let Some(key) = data.params_list.get(counter) else {
-            break;
-        };
+    while let Some(key) = data.params_list.get(counter) {
         let Some(value) = data.params_list.get(counter + 1) else {
             break;
         };

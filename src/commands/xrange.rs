@@ -36,49 +36,39 @@ pub fn handle_xrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
         return;
     }
 
-    let start_string: String;
-    if let Some(_) = some_start.param_value.split_once("-") {
-        start_string = some_start.param_value.clone();
+    let start_string: String = if some_start.param_value.split_once("-").is_some() {
+        some_start.param_value.clone()
     } else {
-        start_string = format!("{}-0", some_start.param_value);
-    }
+        format!("{}-0", some_start.param_value)
+    };
 
-    let end_string: String;
-    if let Some(_) = some_end.param_value.split_once("-") {
-        end_string = some_end.param_value.clone();
+    let end_string: String = if some_end.param_value.split_once("-").is_some() {
+        some_end.param_value.clone()
     } else {
         // todo! figure out some way to set a "max"
-        end_string = format!("{}-0", some_end.param_value);
-    }
+        format!("{}-0", some_end.param_value)
+    };
 
-    let start_entry_id: EntryId;
-    match EntryId::try_from(start_string) {
-        Ok(new_id) => {
-            start_entry_id = new_id;
-        }
+    let start_entry_id: EntryId = match EntryId::try_from(start_string) {
+        Ok(new_id) => new_id,
         Err(e) => {
             write_buffer.push_str(&format!("-{}\r\n", e));
             return;
         }
-    }
+    };
 
-    let end_entry_id: EntryId;
-    match EntryId::try_from(end_string) {
-        Ok(new_id) => {
-            end_entry_id = new_id;
-        }
+    let end_entry_id: EntryId = match EntryId::try_from(end_string) {
+        Ok(new_id) => new_id,
         Err(e) => {
             write_buffer.push_str(&format!("-{}\r\n", e));
             return;
         }
-    }
+    };
 
     // Get range of values
     if let Ok(xrange_resp) = stream_obj.stream_xrange(start_entry_id, end_entry_id) {
         write_buffer.push_str(&xrange_resp);
-        return;
     } else {
         write_buffer.push_str("-ERR issue reading the range in the stream\r\n");
-        return;
     }
 }
