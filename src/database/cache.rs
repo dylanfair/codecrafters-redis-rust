@@ -174,13 +174,21 @@ impl RedisValue {
         }
     }
 
-    pub fn stream_xrange(&self, start: EntryId, end: EntryId) -> Result<String> {
+    pub fn stream_xrange(&self, start: Option<EntryId>, end: Option<EntryId>) -> Result<String> {
         match &self.value {
             DataType::Stream(existing_stream) => {
                 let mut entry_strings = vec![];
                 let mut entry_count = 0;
                 let mut output = String::new();
-                for (key, entry) in existing_stream.range(start..=end) {
+
+                let range = match (start, end) {
+                    (Some(start), Some(end)) => existing_stream.range(start..=end),
+                    (Some(start), None) => existing_stream.range(start..),
+                    (None, Some(end)) => existing_stream.range(..=end),
+                    (None, None) => existing_stream.range(..),
+                };
+
+                for (_, entry) in range {
                     entry_count += 1;
 
                     let mut entry_output = String::new();

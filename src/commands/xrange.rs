@@ -21,6 +21,47 @@ pub fn handle_xrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
         return;
     };
 
+    let start_string: Option<String> = if some_start.param_value.split_once("-").is_some() {
+        Some(some_start.param_value.clone())
+    } else if some_start.param_value == "-" {
+        None
+    } else {
+        Some(format!("{}-0", some_start.param_value))
+    };
+
+    let end_string: Option<String> = if some_end.param_value.split_once("-").is_some() {
+        Some(some_end.param_value.clone())
+    } else if some_end.param_value == "+" {
+        None
+    } else {
+        // todo! figure out some way to set a "max"
+        Some(format!("{}-0", some_end.param_value))
+    };
+
+    let start_entry_id: Option<EntryId> = if let Some(start_string) = start_string {
+        match EntryId::try_from(start_string) {
+            Ok(new_id) => Some(new_id),
+            Err(e) => {
+                write_buffer.push_str(&format!("-{}\r\n", e));
+                return;
+            }
+        }
+    } else {
+        None
+    };
+
+    let end_entry_id: Option<EntryId> = if let Some(end_string) = end_string {
+        match EntryId::try_from(end_string) {
+            Ok(new_id) => Some(new_id),
+            Err(e) => {
+                write_buffer.push_str(&format!("-{}\r\n", e));
+                return;
+            }
+        }
+    } else {
+        None
+    };
+
     // Grab latest stream if it exists
     let stream_obj: RedisValue;
     if let Ok(mut cache) = cache.lock() {
@@ -35,35 +76,6 @@ pub fn handle_xrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
         write_buffer.push_str("-ERR could not get lock to database\r\n");
         return;
     }
-
-    let start_string: String = if some_start.param_value.split_once("-").is_some() {
-        some_start.param_value.clone()
-    } else {
-        format!("{}-0", some_start.param_value)
-    };
-
-    let end_string: String = if some_end.param_value.split_once("-").is_some() {
-        some_end.param_value.clone()
-    } else {
-        // todo! figure out some way to set a "max"
-        format!("{}-0", some_end.param_value)
-    };
-
-    let start_entry_id: EntryId = match EntryId::try_from(start_string) {
-        Ok(new_id) => new_id,
-        Err(e) => {
-            write_buffer.push_str(&format!("-{}\r\n", e));
-            return;
-        }
-    };
-
-    let end_entry_id: EntryId = match EntryId::try_from(end_string) {
-        Ok(new_id) => new_id,
-        Err(e) => {
-            write_buffer.push_str(&format!("-{}\r\n", e));
-            return;
-        }
-    };
 
     // Get range of values
     if let Ok(xrange_resp) = stream_obj.stream_xrange(start_entry_id, end_entry_id) {
