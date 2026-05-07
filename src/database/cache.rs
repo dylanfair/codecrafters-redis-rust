@@ -180,7 +180,7 @@ impl RedisValue {
                 let mut entry_strings = vec![];
                 let mut entry_count = 0;
                 let mut output = String::new();
-                for (key, entry) in existing_stream.range(start..end) {
+                for (key, entry) in existing_stream.range(start..=end) {
                     entry_count += 1;
 
                     let mut entry_output = String::new();
