@@ -21,13 +21,21 @@ pub fn handle_xrange(data: RedisProtocol, write_buffer: &mut String, cache: &Red
         return;
     };
 
-    let start_string: Option<String> = if some_start.param_value.split_once("-").is_some() {
-        Some(some_start.param_value.clone())
-    } else if some_start.param_value == "-" {
+    let start_string: Option<String> = if some_start.param_value == "-" {
         None
+    } else if some_start.param_value.split_once("-").is_some() {
+        Some(some_start.param_value.clone())
     } else {
         Some(format!("{}-0", some_start.param_value))
     };
+
+    // let start_string: Option<String> = if some_start.param_value.split_once("-").is_some() {
+    //     Some(some_start.param_value.clone())
+    // } else if some_start.param_value == "-" {
+    //     None
+    // } else {
+    //     Some(format!("{}-0", some_start.param_value))
+    // };
 
     let end_string: Option<String> = if some_end.param_value.split_once("-").is_some() {
         Some(some_end.param_value.clone())
