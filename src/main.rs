@@ -1,4 +1,5 @@
 use anyhow::Result;
+use clap::Parser;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
@@ -13,8 +14,21 @@ mod commands;
 mod database;
 mod protocol;
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(long)]
+    port: Option<String>,
+}
+
 fn main() -> Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    let args = Args::parse();
+    let port = match args.port {
+        Some(port) => port,
+        None => "6379".to_string(),
+    };
+
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
     let cache = Arc::new(Mutex::new(HashMap::new()));
 
     for stream in listener.incoming() {
