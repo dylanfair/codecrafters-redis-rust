@@ -62,9 +62,9 @@ impl TryFrom<String> for EntryId {
             let milliseconds = milliseconds_parsed.expect("Milliseconds already checked");
             let sequence = sequence_parsed.expect("Sequence already checked");
 
-            if milliseconds == 0 && sequence == 0 {
-                return Err("ERR The ID specified in XADD must be greater than 0-0");
-            }
+            // if milliseconds == 0 && sequence == 0 {
+            //     return Err("ERR The ID specified in XADD must be greater than 0-0");
+            // }
 
             Ok(EntryId::new(milliseconds, sequence))
         } else {
