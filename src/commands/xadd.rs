@@ -32,19 +32,6 @@ impl Display for EntryId {
     }
 }
 
-// impl PartialOrd for EntryId {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         Some(self.cmp(other))
-//     }
-//     // fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//     //     if self.milliseconds_time == other.milliseconds_time {
-//     //         self.sequence_number.partial_cmp(&other.sequence_number)
-//     //     } else {
-//     //         self.milliseconds_time.partial_cmp(&other.milliseconds_time)
-//     //     }
-//     // }
-// }
-
 impl TryFrom<String> for EntryId {
     type Error = &'static str;
 
@@ -61,10 +48,6 @@ impl TryFrom<String> for EntryId {
 
             let milliseconds = milliseconds_parsed.expect("Milliseconds already checked");
             let sequence = sequence_parsed.expect("Sequence already checked");
-
-            // if milliseconds == 0 && sequence == 0 {
-            //     return Err("ERR The ID specified in XADD must be greater than 0-0");
-            // }
 
             Ok(EntryId::new(milliseconds, sequence))
         } else {
@@ -128,6 +111,12 @@ pub fn handle_xadd(data: RedisProtocol, write_buffer: &mut String, cache: &Redis
 
         match EntryId::try_from(new_id_string.clone()) {
             Ok(new_id) => {
+                // Check if 0-0
+                if new_id.milliseconds_time == 0 && new_id.sequence_number == 0 {
+                    write_buffer
+                        .push_str("-ERR The ID specified in XADD must be greater than 0-0\r\n");
+                    return;
+                }
                 // compare here
                 if new_id <= latest_id {
                     write_buffer.push_str("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n");
