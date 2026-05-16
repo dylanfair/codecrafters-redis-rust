@@ -52,7 +52,7 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             .get(i)
             .expect("Within frist param_list range");
 
-        if param.param_value == "BLOCK" {
+        if param.param_value.to_uppercase() == "BLOCK" {
             xread_params.block.block = true;
             let timeout = data.params_list.get(i + 1);
             match timeout {
@@ -71,16 +71,22 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
                 }
             }
         }
-        if param.param_value == "STREAMS" {
+        if param.param_value.to_uppercase() == "STREAMS" {
             stream_start = i + 1;
         }
     }
 
+    let keys_and_ids_len = data.params_list.len() - stream_start;
+    let streams_midpoint = (data.params_list.len() - keys_and_ids_len) + (keys_and_ids_len / 2);
+
     for i in stream_start..data.params_list.len() {
         let value = data.params_list.get(i).expect("Within params_list range");
-        if i < (data.params_list.len() / 2) + 1 {
+
+        if i < streams_midpoint {
+            // before midpoint is a key
             xread_params.stream.keys.push(value.param_value.clone());
         } else {
+            // after midpoint is an entry ID
             let value_string: Option<String> = if value.param_value == "-" {
                 None
             } else if value.param_value.split_once("-").is_some() {
