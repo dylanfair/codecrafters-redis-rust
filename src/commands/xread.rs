@@ -1,6 +1,6 @@
 use crate::{
     RedisCache,
-    commands::xadd::EntryId,
+    commands::xadd::{EntryId, EntryValue},
     database::cache::{RedisValue, retrieve_from_cache},
     protocol::parsing::RedisProtocol,
 };
@@ -44,6 +44,7 @@ impl XReadInterface {
 
 pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
     let mut xread_params = XReadInterface::default();
+    let mut initial_values = vec![];
     let mut stream_start = 2;
 
     for i in 1..data.params_list.len() {
@@ -92,30 +93,74 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             } else if value.param_value.split_once("-").is_some() {
                 Some(value.param_value.clone())
             } else if value.param_value == "$" {
-                todo!();
+                Some("$".to_string())
             } else {
                 Some(format!("{}-0", value.param_value))
             };
 
-            let value_entry_id: EntryId = if let Some(value_string) = value_string {
-                match EntryId::try_from(value_string) {
-                    Ok(new_id) => new_id,
-                    Err(e) => {
-                        write_buffer.push_str(&format!("-{}\r\n", e));
-                        return;
+            let value_entry_id: EntryValue = if let Some(value_string) = value_string {
+                if value_string == "$" {
+                    EntryValue::Max
+                } else {
+                    match EntryId::try_from(value_string) {
+                        Ok(new_id) => EntryValue::Value(new_id),
+                        Err(e) => {
+                            write_buffer.push_str(&format!("-{}\r\n", e));
+                            return;
+                        }
                     }
                 }
             } else {
                 write_buffer.push_str("-ERR missing the valid id not sent\r\n");
                 return;
             };
-            xread_params.stream.ids.push(value_entry_id);
+            initial_values.push(value_entry_id);
         }
     }
-    assert_eq!(
-        xread_params.stream.keys.len(),
-        xread_params.stream.ids.len()
-    );
+    assert_eq!(xread_params.stream.keys.len(), initial_values.len());
+
+    // convert maxes into entryIds?
+    for i in 0..xread_params.stream.keys.len() {
+        let key = xread_params
+            .stream
+            .keys
+            .get(i)
+            .expect("Iterating over list range");
+        let value = initial_values.get(i).expect("Iterating over list range");
+
+        match value {
+            EntryValue::Max => {
+                if let Ok(mut cache) = cache.lock() {
+                    if let Some(existing_stream) = retrieve_from_cache(&mut cache, key) {
+                        match existing_stream.get_latest_stream_id() {
+                            Ok(Some(entry_id)) => xread_params.stream.ids.push(entry_id),
+                            Ok(None) => {
+                                let entry_id = EntryId::try_from("0-0".to_string());
+                                xread_params
+                                    .stream
+                                    .ids
+                                    .push(entry_id.expect("0-0 should always succeed"));
+                            }
+                            Err(e) => {
+                                write_buffer.push_str(&format!("-{}\r\n", e));
+                                return;
+                            }
+                        }
+                    } else {
+                        write_buffer.push_str("*0\r\n");
+                        return;
+                    };
+                } else {
+                    write_buffer.push_str("-ERR could not get lock to database\r\n");
+                    return;
+                }
+            }
+            EntryValue::Value(entry_id) => xread_params.stream.ids.push(entry_id.clone()),
+            EntryValue::Min => {
+                todo!();
+            }
+        };
+    }
 
     let blocking_expiration = if xread_params.block.timeout > 0 {
         let expiration = Utc::now() + Duration::milliseconds(xread_params.block.timeout as i64);

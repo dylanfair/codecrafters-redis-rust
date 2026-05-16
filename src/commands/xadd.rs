@@ -11,6 +11,12 @@ use crate::{
     protocol::parsing::RedisProtocol,
 };
 
+pub enum EntryValue {
+    Max,
+    Min,
+    Value(EntryId),
+}
+
 #[derive(PartialEq, Clone, Debug, Eq, Ord, PartialOrd)]
 pub struct EntryId {
     milliseconds_time: u64,
