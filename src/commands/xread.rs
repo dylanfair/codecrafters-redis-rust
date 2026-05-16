@@ -47,7 +47,7 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
     let mut initial_values = vec![];
     let mut stream_start = 2;
 
-    for i in 1..data.params_list.len() {
+    for i in 1..data.params_n {
         let param = data
             .params_list
             .get(i)
@@ -77,10 +77,10 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
         }
     }
 
-    let keys_and_ids_len = data.params_list.len() - stream_start;
-    let streams_midpoint = (data.params_list.len() - keys_and_ids_len) + (keys_and_ids_len / 2);
+    let keys_and_ids_len = data.params_n - stream_start;
+    let streams_midpoint = (data.params_n - keys_and_ids_len) + (keys_and_ids_len / 2);
 
-    for i in stream_start..data.params_list.len() {
+    for i in stream_start..data.params_n {
         let value = data.params_list.get(i).expect("Within params_list range");
 
         if i < streams_midpoint {

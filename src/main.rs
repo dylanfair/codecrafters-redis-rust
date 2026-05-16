@@ -9,16 +9,22 @@ use std::thread;
 use crate::commands::handle_commands;
 use crate::database::cache::RedisCache;
 use crate::protocol::parsing::RedisProtocol;
+use crate::server::replica::ReplicaInfo;
+use crate::server::server::RedisServer;
 
 mod commands;
 mod database;
 mod protocol;
+mod server;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(long)]
     port: Option<String>,
+
+    #[arg(long)]
+    replicaof: Option<String>,
 }
 
 fn main() -> Result<()> {
@@ -28,15 +34,29 @@ fn main() -> Result<()> {
         None => "6379".to_string(),
     };
 
+    let role;
+    let replicaof = match args.replicaof {
+        Some(replicaof) => {
+            role = "slave".to_string();
+            Some(ReplicaInfo::arg_parse(replicaof)?)
+        }
+        None => {
+            role = "master".to_string();
+            None
+        }
+    };
+
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
     let cache = Arc::new(Mutex::new(HashMap::new()));
+    let server = Arc::new(RedisServer::new(role, replicaof));
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
                 let cache_clone = Arc::clone(&cache);
+                let server_clone = Arc::clone(&server);
                 thread::spawn(|| {
-                    handle_stream(stream, cache_clone);
+                    handle_stream(stream, cache_clone, server_clone);
                 });
             }
             Err(e) => {
@@ -47,7 +67,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn handle_stream(mut stream: TcpStream, cache: RedisCache) {
+fn handle_stream(mut stream: TcpStream, cache: RedisCache, server: Arc<RedisServer>) {
     loop {
         let mut reader = BufReader::new(&mut stream);
         let mut stream_buf = String::new();
@@ -93,7 +113,7 @@ fn handle_stream(mut stream: TcpStream, cache: RedisCache) {
                             );
                             continue;
                         }
-                        handle_commands(redis_data, &mut write_buf, &cache);
+                        handle_commands(redis_data, &mut write_buf, &cache, &server);
                     }
                     Err(e) => {
                         send_error(

@@ -25,8 +25,15 @@ use crate::commands::xrange::handle_xrange;
 use crate::commands::xread::handle_xread;
 use crate::commands::{echo::handle_echo, get::handle_get, set::handle_set};
 use crate::protocol::parsing::RedisProtocol;
+use crate::server::server::RedisServer;
+use std::sync::Arc;
 
-pub fn handle_commands(redis_data: RedisProtocol, write_buffer: &mut String, cache: &RedisCache) {
+pub fn handle_commands(
+    redis_data: RedisProtocol,
+    write_buffer: &mut String,
+    cache: &RedisCache,
+    server: &Arc<RedisServer>,
+) {
     if let Some(action) = redis_data.params_list.first() {
         match action.param_value.to_lowercase().as_str() {
             "ping" => write_buffer.push_str("+PONG\r\n"),
@@ -43,7 +50,7 @@ pub fn handle_commands(redis_data: RedisProtocol, write_buffer: &mut String, cac
             "xadd" => handle_xadd(redis_data, write_buffer, cache),
             "xrange" => handle_xrange(redis_data, write_buffer, cache),
             "xread" => handle_xread(redis_data, write_buffer, cache),
-            "info" => handle_info(redis_data, write_buffer),
+            "info" => handle_info(redis_data, write_buffer, server),
             _ => write_buffer.push_str("-unrecognized command\r\n"),
         }
     } else {
