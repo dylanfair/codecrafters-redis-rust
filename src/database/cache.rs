@@ -223,6 +223,55 @@ impl RedisValue {
             _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
         }
     }
+
+    pub fn stream_xread(&self, start: EntryId) -> Result<String> {
+        match &self.value {
+            DataType::Stream(existing_stream) => {
+                let mut entry_strings = vec![];
+                let mut entry_count = 0;
+                let mut output = String::new();
+
+                let range = existing_stream.range(&start..);
+
+                for (id, entry) in range {
+                    if *id == start {
+                        // xread is exclusive, we leave out given entry
+                        continue;
+                    }
+                    entry_count += 1;
+
+                    let mut entry_output = String::new();
+                    let entry_len = entry.len() * 2 - 2; // removing 'id' from the count
+
+                    // Push in length of sub-array (always 2)
+                    entry_output.push_str("*2\r\n");
+
+                    // Push in ID
+                    let id = entry.get("id").expect("'id' should always be there");
+                    entry_output.push_str(&format!("${}\r\n{}\r\n", id.len(), id));
+
+                    // Push in list of values (leaving out ID)
+                    entry_output.push_str(&format!("*{}\r\n", entry_len));
+                    for (key, value) in entry {
+                        if key == "id" {
+                            continue;
+                        }
+                        entry_output.push_str(&format!("${}\r\n{}\r\n", key.len(), key));
+                        entry_output.push_str(&format!("${}\r\n{}\r\n", value.len(), value));
+                    }
+                    entry_strings.push(entry_output);
+                }
+
+                // Push total list of values
+                output.push_str(&format!("*{}\r\n", entry_count));
+                for sub_string in entry_strings {
+                    output.push_str(&sub_string);
+                }
+                Ok(output)
+            }
+            _ => Err(anyhow!("Got a DataType that this isn't implemented for")),
+        }
+    }
 }
 
 pub fn retrieve_from_cache(
