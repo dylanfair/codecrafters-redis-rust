@@ -162,6 +162,10 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
             }
         }
 
+        if any_success {
+            break;
+        }
+
         // If we aren't blocking, just exit
         if !xread_params.block.block {
             if !any_success {
