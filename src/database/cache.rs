@@ -224,17 +224,17 @@ impl RedisValue {
         }
     }
 
-    pub fn stream_xread(&self, start: EntryId) -> Result<String> {
+    pub fn stream_xread(&self, start: &EntryId) -> Result<String> {
         match &self.value {
             DataType::Stream(existing_stream) => {
                 let mut entry_strings = vec![];
                 let mut entry_count = 0;
                 let mut output = String::new();
 
-                let range = existing_stream.range(&start..);
+                let range = existing_stream.range(start..);
 
                 for (id, entry) in range {
-                    if *id == start {
+                    if id == start {
                         // xread is exclusive, we leave out given entry
                         continue;
                     }
@@ -260,6 +260,10 @@ impl RedisValue {
                         entry_output.push_str(&format!("${}\r\n{}\r\n", value.len(), value));
                     }
                     entry_strings.push(entry_output);
+                }
+
+                if entry_count == 0 {
+                    return Ok(String::new());
                 }
 
                 // Push total list of values
