@@ -51,7 +51,7 @@ pub fn handle_xread(data: RedisProtocol, write_buffer: &mut String, cache: &Redi
         let param = data
             .params_list
             .get(i)
-            .expect("Within frist param_list range");
+            .expect("Within first param_list range");
 
         if param.param_value.to_uppercase() == "BLOCK" {
             xread_params.block.block = true;
