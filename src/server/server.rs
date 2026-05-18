@@ -14,7 +14,9 @@ pub struct RedisServer {
 
 #[derive(EnumString, Clone)]
 pub enum RedisRole {
+    #[strum(serialize = "master")]
     Master,
+    #[strum(serialize = "slave")]
     Slave,
 }
 
