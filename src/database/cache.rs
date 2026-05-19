@@ -109,7 +109,7 @@ impl RedisValue {
                 };
 
                 // If start >= stop
-                if start >= stop {
+                if start > stop {
                     return Ok(&[]); // return empty array;
                 }
 
