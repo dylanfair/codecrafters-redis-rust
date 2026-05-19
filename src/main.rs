@@ -86,7 +86,7 @@ fn main() -> Result<()> {
             &mut connection,
             &mut "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".to_string(),
         );
-        let _psync_response = read_response(&mut connection)?;
+        let psync_response = read_response(&mut connection)?;
     }
 
     for stream in listener.incoming() {
