@@ -2,8 +2,8 @@ use anyhow::{Result, anyhow};
 
 #[derive(Clone)]
 pub struct ReplicaInfo {
-    location: String,
-    port: String,
+    pub location: String,
+    pub port: String,
 }
 
 impl ReplicaInfo {

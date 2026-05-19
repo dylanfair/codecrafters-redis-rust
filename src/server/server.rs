@@ -12,7 +12,7 @@ pub struct RedisServer {
     pub master_repl: Option<MasterRepl>,
 }
 
-#[derive(EnumString, Clone)]
+#[derive(EnumString, Clone, PartialEq)]
 pub enum RedisRole {
     #[strum(serialize = "master")]
     Master,

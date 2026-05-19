@@ -10,7 +10,7 @@ use crate::commands::handle_commands;
 use crate::database::cache::RedisCache;
 use crate::protocol::parsing::RedisProtocol;
 use crate::server::replica::ReplicaInfo;
-use crate::server::server::RedisServer;
+use crate::server::server::{RedisRole, RedisServer};
 
 mod commands;
 mod database;
@@ -49,6 +49,16 @@ fn main() -> Result<()> {
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
     let cache = Arc::new(Mutex::new(HashMap::new()));
     let server = Arc::new(RedisServer::new(role, replicaof));
+
+    // If replica, send a PING to master
+    if server.role == RedisRole::Slave {
+        let mut connection = TcpStream::connect(format!(
+            "{}:{}",
+            server.replicaof.as_ref().unwrap().location,
+            server.replicaof.as_ref().unwrap().port
+        ))?;
+        send_response(&mut connection, &mut "*1\r\n$4\r\nPING\r\n".to_string());
+    }
 
     for stream in listener.incoming() {
         match stream {
