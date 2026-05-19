@@ -177,9 +177,9 @@ fn send_error(stream: &mut TcpStream, error: &str) {
 }
 
 fn read_response(stream: &mut TcpStream) -> Result<String> {
-    let mut reader = BufReader::new(stream);
-    let mut stream_buf = String::new();
+    let mut buffer = [0; 128];
+    let n = stream.read(&mut buffer[..])?;
+    let stream_buf = String::from_utf8((buffer[..n]).to_vec())?;
 
-    reader.read_to_string(&mut stream_buf)?;
     Ok(stream_buf)
 }
