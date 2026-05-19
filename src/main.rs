@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -58,6 +58,28 @@ fn main() -> Result<()> {
             server.replicaof.as_ref().unwrap().port
         ))?;
         send_response(&mut connection, &mut "*1\r\n$4\r\nPING\r\n".to_string());
+        let ping_response = read_response(&mut connection)?;
+        assert_eq!(ping_response, "+PONG\r\n");
+
+        // then replconf listening port
+        send_response(
+            &mut connection,
+            &mut format!(
+                "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n${}\r\n{}\r\n",
+                port.len(),
+                port
+            ),
+        );
+        let listening_port_response = read_response(&mut connection)?;
+        assert_eq!(listening_port_response, "+OK\r\n");
+
+        // then replconf capa psync2
+        send_response(
+            &mut connection,
+            &mut "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".to_string(),
+        );
+        let psync2_response = read_response(&mut connection)?;
+        assert_eq!(psync2_response, "+OK\r\n");
     }
 
     for stream in listener.incoming() {
@@ -152,4 +174,12 @@ fn send_response(stream: &mut TcpStream, write_buf: &mut String) {
 fn send_error(stream: &mut TcpStream, error: &str) {
     eprintln!("{}", error);
     send_response(stream, &mut format!("- {}\r\n", error));
+}
+
+fn read_response(stream: &mut TcpStream) -> Result<String> {
+    let mut reader = BufReader::new(stream);
+    let mut stream_buf = String::new();
+
+    reader.read_to_string(&mut stream_buf)?;
+    Ok(stream_buf)
 }

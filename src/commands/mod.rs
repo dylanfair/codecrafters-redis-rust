@@ -5,6 +5,7 @@ pub mod info;
 pub mod llen;
 pub mod lpop;
 pub mod lrange;
+pub mod replconf;
 pub mod rpush;
 pub mod set;
 pub mod type_redis;
@@ -18,6 +19,7 @@ use crate::commands::info::handle_info;
 use crate::commands::llen::handle_llen;
 use crate::commands::lpop::handle_lpop;
 use crate::commands::lrange::handle_lrange;
+use crate::commands::replconf::handle_replconf;
 use crate::commands::rpush::{PushType, handle_xpush};
 use crate::commands::type_redis::handle_type;
 use crate::commands::xadd::handle_xadd;
@@ -51,6 +53,7 @@ pub fn handle_commands(
             "xrange" => handle_xrange(redis_data, write_buffer, cache),
             "xread" => handle_xread(redis_data, write_buffer, cache),
             "info" => handle_info(redis_data, write_buffer, server),
+            "replconf" => handle_replconf(redis_data, write_buffer, server),
             _ => write_buffer.push_str("-unrecognized command\r\n"),
         }
     } else {
