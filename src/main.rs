@@ -201,8 +201,7 @@ fn send_error(stream: &mut TcpStream, error: &str) {
 fn read_response(stream: &mut TcpStream) -> Result<String> {
     let mut buffer = [0; 256];
     let n = stream.read(&mut buffer[..])?;
-    let stream_buf = String::from_utf8((buffer[..n]).to_vec())
-        .with_context(|| format!("n is: {} | Buffer is: {:?}", n, buffer))?;
+    let stream_buf = String::from_utf8_lossy(&buffer[..n]);
 
-    Ok(stream_buf)
+    Ok(stream_buf.to_string())
 }
