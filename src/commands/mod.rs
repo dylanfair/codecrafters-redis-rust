@@ -30,9 +30,11 @@ use crate::commands::xread::handle_xread;
 use crate::commands::{echo::handle_echo, get::handle_get, set::handle_set};
 use crate::protocol::parsing::RedisProtocol;
 use crate::server::server::RedisServer;
+use std::net::TcpStream;
 use std::sync::Arc;
 
 pub fn handle_commands(
+    stream: &mut TcpStream,
     redis_data: RedisProtocol,
     write_buffer: &mut String,
     cache: &RedisCache,
@@ -56,7 +58,7 @@ pub fn handle_commands(
             "xread" => handle_xread(redis_data, write_buffer, cache),
             "info" => handle_info(redis_data, write_buffer, server),
             "replconf" => handle_replconf(redis_data, write_buffer, server),
-            "psync" => handle_psync(write_buffer, server),
+            "psync" => handle_psync(stream, redis_data, write_buffer, server),
             _ => write_buffer.push_str("-unrecognized command\r\n"),
         }
     } else {

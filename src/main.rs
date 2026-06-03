@@ -152,7 +152,7 @@ fn handle_stream(mut stream: TcpStream, cache: RedisCache, server: Arc<RedisServ
                             );
                             continue;
                         }
-                        handle_commands(redis_data, &mut write_buf, &cache, &server);
+                        handle_commands(&mut stream, redis_data, &mut write_buf, &cache, &server);
                     }
                     Err(e) => {
                         send_error(
