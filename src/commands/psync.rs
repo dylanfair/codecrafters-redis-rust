@@ -34,11 +34,13 @@ pub fn handle_psync(
             .expect("Failed to open a connection to send the empty RBD file");
 
         // send RDB transfer
-        let mut bytes = hex::decode("524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2").expect("Failed to decode empty rdb hex");
-        let mut send_bytes = format!("${}\r\n", bytes.len()).into_bytes();
-        send_bytes.append(&mut bytes);
+        let bytes = hex::decode("524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2").expect("Failed to decode empty rdb hex");
+        write_buffer.push_str(&format!("${}\r\n", bytes.len()));
 
-        if let Err(e) = connection.write_all(&send_bytes) {
+        if let Err(e) = connection.write(write_buffer.as_bytes()) {
+            eprintln!("Failed to write response: {}", e);
+        }
+        if let Err(e) = connection.write_all(&bytes) {
             eprintln!("Failed to write response: {}", e);
         }
         if let Err(e) = connection.flush() {
