@@ -126,7 +126,6 @@ fn handle_stream(mut stream: TcpStream, cache: RedisCache, server: Arc<RedisServ
                             data_size, e
                         )),
                     }
-
                     continue;
                 }
 
