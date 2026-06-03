@@ -170,6 +170,9 @@ fn handle_stream(mut stream: TcpStream, cache: RedisCache, server: Arc<RedisServ
 }
 
 fn send_response(stream: &mut TcpStream, write_buf: &mut String) {
+    if write_buf.is_empty() {
+        return;
+    }
     if let Err(e) = stream.write_all(write_buf.as_bytes()) {
         eprintln!("Failed to write response: {}", e);
     }
