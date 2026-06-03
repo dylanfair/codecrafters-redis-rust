@@ -118,6 +118,15 @@ fn handle_stream(mut stream: TcpStream, cache: RedisCache, server: Arc<RedisServ
                 }
 
                 if &stream_buf[0..1] == "$" {
+                    let data_size = &stream_buf[1..].trim().parse::<usize>().unwrap();
+                    match reader.read_line(&mut stream_buf) {
+                        Ok(_) => {}
+                        Err(e) => write_buf.push_str(&format!(
+                            "Failed to read RDB payload with size {}: {}",
+                            data_size, e
+                        )),
+                    }
+
                     continue;
                 }
 
