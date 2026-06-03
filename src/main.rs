@@ -117,6 +117,16 @@ fn handle_stream(mut stream: TcpStream, cache: RedisCache, server: Arc<RedisServ
                     return;
                 }
 
+                if &stream_buf[0..1] == "$" {
+                    continue;
+                }
+
+                // Check if first value is a *
+                if &stream_buf[0..1] != "*" {
+                    send_error(&mut stream, "First value is not *");
+                    continue;
+                }
+
                 // Grab rest of lines based on first number
                 if let Ok(param_n) = &stream_buf[1..].trim().parse::<usize>() {
                     for _ in 0..param_n * 2 {

@@ -40,7 +40,7 @@ pub fn handle_psync(
         if let Err(e) = connection.write(write_buffer.as_bytes()) {
             eprintln!("Failed to write response: {}", e);
         }
-        if let Err(e) = connection.write_all(&bytes) {
+        if let Err(e) = connection.write_all(&bytes[..]) {
             eprintln!("Failed to write response: {}", e);
         }
         if let Err(e) = connection.flush() {
